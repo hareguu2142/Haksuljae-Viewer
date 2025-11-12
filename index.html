@@ -3,30 +3,238 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pamphlet</title>
+    <title>Pamphlet Viewer</title>
     <style>
-        /* 화면을 이미지로 꽉 채우기 */
+        :root {
+            color-scheme: dark;
+            font-family: "Segoe UI", "Apple SD Gothic Neo", system-ui, -apple-system, sans-serif;
+        }
+
         html, body {
             margin: 0;
-            height: 100%;
-            background: #000;
-            overflow: hidden;
+            min-height: 100%;
+            background: #0b101a;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100svh;
+            color: #f9fbff;
+            background: radial-gradient(circle at 20% 0%, rgba(108, 164, 255, 0.18), transparent 45%), linear-gradient(180deg, #0b101a 0%, #06070e 80%);
+        }
+
+        .viewer-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(6px);
+        }
+
+        .top-controls,
+        .bottom-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.85rem clamp(1rem, 4vw, 3rem);
+            background: rgba(18, 23, 38, 0.85);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 1px 12px rgba(5, 9, 18, 0.4);
+        }
+
+        .bottom-controls {
+            border-bottom: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            justify-content: center;
+            gap: 2rem;
+            position: relative;
+            background: rgba(11, 16, 27, 0.92);
+            box-shadow: 0 -1px 12px rgba(5, 9, 18, 0.4);
+        }
+
+        .top-controls {
+            flex-wrap: wrap;
+        }
+
+        .page-select-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .nav-button-group {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        label {
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            color: #fefefe;
+        }
+
+        select {
+            appearance: none;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: #0b1018;
+            padding: 0.45rem 2.6rem 0.45rem 0.85rem;
+            border-radius: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            min-width: 10rem;
+            cursor: pointer;
+            background-image: linear-gradient(45deg, transparent 50%, #0b1018 50%), linear-gradient(135deg, #0b1018 50%, transparent 50%);
+            background-position: calc(100% - 18px) 50%, calc(100% - 12px) 50%;
+            background-size: 6px 6px;
+            background-repeat: no-repeat;
+        }
+
+        select:focus-visible,
+        button:focus-visible {
+            outline: 2px solid #7fd6ff;
+            outline-offset: 2px;
+        }
+
+        .page-counter {
+            font-variant-numeric: tabular-nums;
+            color: rgba(255, 255, 255, 0.92);
+            letter-spacing: 0.02em;
+        }
+
+        .image-stage {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: clamp(0.5rem, 3vh, 2.5rem);
+            background: linear-gradient(145deg, rgba(16, 22, 34, 0.95), rgba(8, 12, 24, 0.9));
         }
 
         .image-viewer {
-            width: 100vw;
-            height: 100vh;       /* 기본 뷰포트 높이 */
-            height: 100dvh;      /* 동적 뷰포트 높이(지원 브라우저) */
-            display: block;
-            object-fit: contain;   /* 화면을 꽉 채우되 필요 시 잘라냄 */
-            object-position: center center;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
             user-select: none;
             -webkit-user-drag: none;
-            background: #000;
+            background: #0f1625;
+            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.65),
+                        0 0 25px rgba(79, 179, 255, 0.18);
+        }
+
+        .nav-btn {
+            border: none;
+            background: linear-gradient(135deg, #fefefe, #9bd2ff);
+            color: #0b1018;
+            border-radius: 999px;
+            width: 56px;
+            height: 56px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 120ms ease, box-shadow 120ms ease;
+            box-shadow: 0 12px 25px rgba(99, 164, 255, 0.35);
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 15px 30px rgba(99, 164, 255, 0.45);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        @media (max-width: 600px) {
+            .top-controls {
+                justify-content: center;
+            }
+
+            .bottom-controls {
+                gap: 1rem;
+            }
+
+            select {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <img src="Pamphlet.png" alt="Pamphlet" class="image-viewer" loading="eager" decoding="async" draggable="false" />
+    <div class="viewer-container">
+        <header class="top-controls">
+            <div class="nav-button-group" aria-label="페이지 화살표">
+                <button class="nav-btn prev-page" aria-label="이전 페이지" disabled>&larr;</button>
+                <button class="nav-btn next-page" aria-label="다음 페이지">&rarr;</button>
+            </div>
+            <div class="page-select-group">
+                <label for="pageSelect">페이지</label>
+                <select id="pageSelect" aria-label="페이지 선택"></select>
+            </div>
+            <div class="page-counter" id="pageCounter">0 / 0</div>
+        </header>
+
+        <main class="image-stage">
+            <img src="pages/001.png" alt="Pamphlet page" class="image-viewer" id="viewerImage" loading="eager" decoding="async" draggable="false" />
+        </main>
+
+        <footer class="bottom-controls">
+            <button class="nav-btn prev-page" aria-label="이전 페이지" disabled>&larr;</button>
+            <button class="nav-btn next-page" aria-label="다음 페이지">&rarr;</button>
+        </footer>
+    </div>
+
+    <script>
+        const pages = Array.from({ length: 19 }, (_, index) => {
+            const pageNumber = (index + 1).toString().padStart(3, "0");
+            return { label: `페이지 ${index + 1}`, src: `pages/${pageNumber}.png` };
+        });
+
+        const viewerImage = document.getElementById("viewerImage");
+        const pageSelect = document.getElementById("pageSelect");
+        const pageCounter = document.getElementById("pageCounter");
+        const prevButtons = document.querySelectorAll(".prev-page");
+        const nextButtons = document.querySelectorAll(".next-page");
+
+        let currentIndex = 0;
+
+        pages.forEach((page, index) => {
+            const option = document.createElement("option");
+            option.value = index.toString();
+            option.textContent = page.label;
+            pageSelect.appendChild(option);
+        });
+
+        function updateView(newIndex) {
+            currentIndex = Math.min(Math.max(newIndex, 0), pages.length - 1);
+            viewerImage.src = pages[currentIndex].src;
+            pageSelect.value = currentIndex.toString();
+            pageCounter.textContent = `${currentIndex + 1} / ${pages.length}`;
+            prevButtons.forEach((button) => (button.disabled = currentIndex === 0));
+            nextButtons.forEach((button) => (button.disabled = currentIndex === pages.length - 1));
+        }
+
+        pageSelect.addEventListener("change", (event) => {
+            updateView(Number(event.target.value));
+        });
+
+        prevButtons.forEach((button) => button.addEventListener("click", () => updateView(currentIndex - 1)));
+        nextButtons.forEach((button) => button.addEventListener("click", () => updateView(currentIndex + 1)));
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowLeft") {
+                updateView(currentIndex - 1);
+            } else if (event.key === "ArrowRight") {
+                updateView(currentIndex + 1);
+            }
+        });
+
+        updateView(0);
+    </script>
 </body>
 </html>
